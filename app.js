@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { HouseInteractions, isTap } from './interactions.js?v=1';
-import { ViewCutaway, addLandingConnector, createExterior, createStairRoute } from './house-view.js?v=1';
+import { ViewCutaway, addLandingConnector, createExterior, createStairRoute } from './house-view.js?v=landscape-1';
+import { createLandscape } from './landscape.js?v=1';
 
 const $=id=>document.getElementById(id), stage=$('stage');
 const floorInfo={ALL:{name:'三层总览',subtitle:'00 / 一个完整的家',level:0,defaultRoom:'living',center:[-.8,1.5,3.5],span:34},F1:{name:'一层',subtitle:'01 / 日常与会客',level:0,defaultRoom:'living',center:[-2,0,3.5],span:22},F2:{name:'二层',subtitle:'02 / 休息与私密',level:3.06,defaultRoom:'master',center:[-2,3.06,3.5],span:20},B1:{name:'负一层',subtitle:'03 / 休闲与留宿',level:-3.06,defaultRoom:'tea',center:[-1,-3.06,3.5],span:28}};
@@ -62,6 +63,7 @@ async function buildFloor(floor){
  await Promise.all([...new Set(def.parts.map(p=>manifest.materials[p.material].texture).filter(Boolean))].map(loadTexture));
  const group=new THREE.Group();group.name=floor;devices.prepareFloor(floor,group);
  for(const part of def.parts){const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(bytes,part.offsets[0],part.count*3),3));geometry.setAttribute('normal',new THREE.BufferAttribute(new Int8Array(bytes,part.offsets[1],part.count*3),3,true));geometry.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(bytes,part.offsets[2],part.count*2),2));if(part.indexCount)geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(bytes,part.offsets[3],part.indexCount),1));geometry.computeBoundingSphere();const mesh=new THREE.Mesh(geometry,material(manifest.materials[part.material],part.role,floor));mesh.userData.role=part.role;mesh.name=manifest.materials[part.material].name;if(part.interaction)devices.attachDoorMesh(part.interaction,mesh);else group.add(mesh);}
+ if(floor==='F1')group.add(createLandscape(overviewDefinition.landscape));
  const bounds=new THREE.Box3().setFromObject(group);const size=bounds.getSize(new THREE.Vector3());const center=bounds.getCenter(new THREE.Vector3());floorInfo[floor].center=[center.x,floorInfo[floor].level,center.z];floorInfo[floor].span=Math.max(size.x,size.z*1.5)*1.08;
  devices.buildLights(floor,group);if(floor==='F2')addLandingConnector(group,overviewDefinition);floorCache.set(floor,group);return group;
 }
@@ -115,7 +117,7 @@ function updateCutDirection(){if(!activeCamera||!state.cut)return;cutaway.update
 function resetOverview(instant=false){
  state.inside=false;state.room=null;state.cut=true;state.overviewFocus='all';pressed(['cut','solid'],'cut');if(stairRoute)stairRoute.visible=false;
  camera.fov=42;camera.updateProjectionMatrix();const target=vec(floorInfo.ALL.center),scale=Math.max(1,1.1/Math.max(.4,camera.aspect));
- moveTo(target.clone().add(vec([-27,14,27]).multiplyScalar(scale)),target,instant);updateDetails();applyCut();$('view-name').textContent='三层原位总览 · 随视角剖切';
+ moveTo(target.clone().add(vec([-30,16,30]).multiplyScalar(scale)),target,instant);updateDetails();applyCut();$('view-name').textContent='三层原位总览 · 随视角剖切';
 }
 function focusStairs(){
  if(state.loading||state.floor!=='ALL')return;state.mode='3d';activeCamera=camera;controls.object=camera;controls.enableRotate=true;state.inside=false;state.cut=true;state.overviewFocus='stairs';pressed(['cut','solid'],'cut');
@@ -126,7 +128,7 @@ function focusStairs(){
 function showExterior(){
  if(state.loading||state.floor!=='ALL')return;state.mode='3d';activeCamera=camera;controls.object=camera;controls.enableRotate=true;state.inside=false;state.cut=false;state.overviewFocus='exterior';pressed(['cut','solid'],'solid');
  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode==='3d')));stage.hidden=false;$('render-view').hidden=true;stairRoute.visible=false;
- camera.fov=42;camera.updateProjectionMatrix();const target=vec([-.8,2.7,3.5]),scale=Math.max(1,1.1/Math.max(.4,camera.aspect));moveTo(target.clone().add(vec([-26,12,26]).multiplyScalar(scale)),target);applyCut();resize();$('view-name').textContent='外观临时方案 · 待实景照片更新';
+ camera.fov=42;camera.updateProjectionMatrix();const target=vec([-.8,2.7,3.5]),scale=Math.max(1,1.1/Math.max(.4,camera.aspect));moveTo(target.clone().add(vec([-30,14,30]).multiplyScalar(scale)),target);applyCut();resize();$('view-name').textContent='外观临时方案 · 待实景照片更新';
 }
 $('exterior-view').onclick=showExterior;
 function moveTo(position,target,instant=false){if(reduced||instant){camera.position.copy(position);controls.target.copy(target);controls.update();transition=null;}else transition={p:camera.position.clone(),t:controls.target.clone(),endP:position,endT:target,start:performance.now()};}
@@ -185,4 +187,4 @@ function bindModelInteractions(){
 }
 
 document.querySelectorAll('[data-floor]').forEach(b=>b.onclick=()=>changeFloor(b.dataset.floor));document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{state.mode=b.dataset.mode;updateMode();});$('inside').onclick=()=>{if(!rooms||state.loading)return;if(state.floor==='ALL'){focusStairs();return;}state.room=currentRoom().id;state.mode='3d';updateDetails();updateMode();roomView(true);};$('open-render').onclick=()=>{state.mode='render';updateMode();};$('reset').onclick=()=>resetView();$('zoom-in').onclick=()=>zoom(.82);$('zoom-out').onclick=()=>zoom(1.22);$('cut').onclick=()=>{state.cut=true;pressed(['cut','solid'],'cut');applyCut();};$('solid').onclick=()=>{state.cut=false;pressed(['cut','solid'],'solid');applyCut();};$('day').onclick=()=>light(false);$('night').onclick=()=>light(true);$('labels').onchange=updateLabels;$('full').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.querySelector('.workspace').requestFullscreen();}catch{$('view-name').textContent='此浏览器暂不支持全屏';}};$('retry').onclick=()=>{if(!renderer)location.reload();else changeFloor(state.floor);};stage.addEventListener('keydown',e=>{if(e.key==='+')zoom(.85);if(e.key==='-')zoom(1.18);if(e.key==='Home')resetView();});
-try{[manifest,rooms,overviewDefinition]=await Promise.all([json('model/manifest.json?v=interactive-2'),json('rooms.json'),json('model/overview.json?v=1')]);devices=new HouseInteractions(manifest.interactions,deviceChanged,reduced);initRenderer();await changeFloor('ALL');}catch(e){failure(e);}
+try{[manifest,rooms,overviewDefinition]=await Promise.all([json('model/manifest.json?v=interactive-2'),json('rooms.json'),json('model/overview.json?v=landscape-1')]);devices=new HouseInteractions(manifest.interactions,deviceChanged,reduced);initRenderer();await changeFloor('ALL');}catch(e){failure(e);}

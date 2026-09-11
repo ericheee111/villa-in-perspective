@@ -31,7 +31,8 @@ export class ViewCutaway {
       if (exterior) mesh.visible = overview && (!enabled || role === 'shell');
       const material = mesh.material;
       const floor = mesh.userData.floor || material.userData.floor;
-      const planes = enabled && role === 'shell' ? this.planes.get(floor) || this.planes.get('F2') : [];
+      let planes = enabled && role === 'shell' ? this.planes.get(floor) || this.planes.get('F2') : [];
+      if (role === 'landscape' && enabled && overview) planes = [this.planes.get('F1')[1]];
       const changed = material.clippingPlanes !== planes || material.clipIntersection !== true;
       material.clippingPlanes = planes;
       // Intersect the near-camera half-space with the part above the low wall.

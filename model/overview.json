@@ -352,5 +352,23 @@
     "Landing connection and exterior are editable browser additions; original blend is unchanged.",
     "Exterior massing, roof headhouse and canopy are provisional until photographs are supplied.",
     "Stair dimensions and headroom are model checks, not construction acceptance."
-  ]
+  ],
+  "landscape": {
+    "borderWidth": 3,
+    "walkWidth": 0.9,
+    "surfaceY": -0.025,
+    "building": {
+      "minX": -13.574324477366256,
+      "maxX": 12.934740243243244,
+      "minZ": -0.26150442477876107,
+      "maxZ": 7.165130111524164
+    },
+    "driveway": {
+      "startX": 12.644463054054054,
+      "depth": 5,
+      "minZ": 0.034867256637168144,
+      "maxZ": 6.9024907063197025
+    },
+    "note": "Provisional 3m ground ring, 0.9m walking edge and 5m east-facing garage apron; plot boundaries and exterior levels await site photographs."
+  }
 }
