@@ -1,0 +1,429 @@
+{
+  "sourceSha256": "052a0ca4003093d2df5d85de79a514ec8c49fa19e833d1a6c3720cd32c8e7c56",
+  "spots": [
+    {
+      "id": "eat-0",
+      "action": "eat",
+      "floor": "F1",
+      "cell": 65018,
+      "position": [
+        -0.8800000000000008,
+        0.005,
+        3.56
+      ],
+      "look": [
+        -2.1,
+        4.55
+      ],
+      "seat": {
+        "position": [
+          -1.6161115765571594,
+          0.4865687693575438,
+          3.711881399154663
+        ],
+        "source": "CL_Dining6_02_fabric"
+      },
+      "tableY": 0.7549999952316284,
+      "light": "light-dining",
+      "resource": "CL_Dining6_02_fabric"
+    },
+    {
+      "id": "eat-1",
+      "action": "eat",
+      "floor": "F1",
+      "cell": 64957,
+      "position": [
+        -3.3200000000000003,
+        0.005,
+        3.56
+      ],
+      "look": [
+        -2.1,
+        4.55
+      ],
+      "seat": {
+        "position": [
+          -2.5838876962661743,
+          0.48656876853543984,
+          3.7118808031082153
+        ],
+        "source": "CL_Dining6_03_fabric"
+      },
+      "tableY": 0.7549999952316284,
+      "light": "light-dining",
+      "resource": "CL_Dining6_03_fabric"
+    },
+    {
+      "id": "eat-2",
+      "action": "eat",
+      "floor": "F1",
+      "cell": 97640,
+      "position": [
+        -3.3200000000000003,
+        0.005,
+        5.52
+      ],
+      "look": [
+        -2.1,
+        4.55
+      ],
+      "seat": {
+        "position": [
+          -2.583888292312622,
+          0.4865687675256139,
+          5.388118505477905
+        ],
+        "source": "CL_Dining6_05_fabric"
+      },
+      "tableY": 0.7549999952316284,
+      "light": "light-dining",
+      "resource": "CL_Dining6_05_fabric"
+    },
+    {
+      "id": "eat-3",
+      "action": "eat",
+      "floor": "F1",
+      "cell": 97701,
+      "position": [
+        -0.8800000000000008,
+        0.005,
+        5.52
+      ],
+      "look": [
+        -2.1,
+        4.55
+      ],
+      "seat": {
+        "position": [
+          -1.6161121726036072,
+          0.4865687675717839,
+          5.3881189823150635
+        ],
+        "source": "CL_Dining6_06_fabric"
+      },
+      "tableY": 0.7549999952316284,
+      "light": "light-dining",
+      "resource": "CL_Dining6_06_fabric"
+    },
+    {
+      "id": "tv-0",
+      "action": "tv",
+      "floor": "B1",
+      "cell": 86882,
+      "position": [
+        9.600000000000001,
+        -3.055,
+        4.84
+      ],
+      "look": [
+        9.6,
+        0.54
+      ],
+      "seat": {
+        "position": [
+          9.6,
+          -2.5418393787557765,
+          5.81
+        ],
+        "source": "P3_Cinema_sofa_CL_Sofa_2873_Leather Sofa"
+      },
+      "light": "light-cinema",
+      "resource": "P3_Cinema_sofa_CL_Sofa_2873_Leather Sofa:9.6"
+    },
+    {
+      "id": "tv-1",
+      "action": "tv",
+      "floor": "B1",
+      "cell": 86902,
+      "position": [
+        10.399999999999999,
+        -3.055,
+        4.84
+      ],
+      "look": [
+        10.42,
+        0.54
+      ],
+      "seat": {
+        "position": [
+          10.42,
+          -2.5462064831617743,
+          5.81
+        ],
+        "source": "P3_Cinema_sofa_CL_Sofa_2873_Leather Sofa"
+      },
+      "light": "light-cinema",
+      "resource": "P3_Cinema_sofa_CL_Sofa_2873_Leather Sofa:10.42"
+    },
+    {
+      "id": "tv-2",
+      "action": "tv",
+      "floor": "B1",
+      "cell": 86923,
+      "position": [
+        11.239999999999998,
+        -3.055,
+        4.84
+      ],
+      "look": [
+        11.24,
+        0.54
+      ],
+      "seat": {
+        "position": [
+          11.24,
+          -2.5425566442181435,
+          5.81
+        ],
+        "source": "P3_Cinema_sofa_CL_Sofa_2873_Leather Sofa"
+      },
+      "light": "light-cinema",
+      "resource": "P3_Cinema_sofa_CL_Sofa_2873_Leather Sofa:11.24"
+    },
+    {
+      "id": "tv-3",
+      "action": "tv",
+      "floor": "B1",
+      "cell": 64137,
+      "position": [
+        9.64,
+        -3.055,
+        3.4800000000000004
+      ],
+      "look": [
+        8.91,
+        0.54
+      ],
+      "seat": {
+        "position": [
+          8.91,
+          -2.5241025345794244,
+          4
+        ],
+        "source": "P3_Cinema_armchair_0_F1_PH_Lounge_W"
+      },
+      "light": "light-cinema",
+      "resource": "P3_Cinema_armchair_0_F1_PH_Lounge_W"
+    },
+    {
+      "id": "read-living-0",
+      "action": "read",
+      "floor": "F1",
+      "cell": 89107,
+      "position": [
+        2.1999999999999993,
+        -0.144,
+        5
+      ],
+      "look": [
+        2.2,
+        4.5
+      ],
+      "seat": {
+        "position": [
+          2.2,
+          0.3672459328745936,
+          6.1
+        ],
+        "source": "CL_Sofa_2873_Leather Sofa"
+      },
+      "light": "light-living",
+      "resource": "CL_Sofa_2873_Leather Sofa:2.2"
+    },
+    {
+      "id": "read-living-1",
+      "action": "read",
+      "floor": "F1",
+      "cell": 77793,
+      "position": [
+        3.1999999999999993,
+        -0.144,
+        4.319999999999999
+      ],
+      "look": [
+        3.2,
+        4.5
+      ],
+      "seat": {
+        "position": [
+          3.2,
+          0.3637875520538621,
+          6.1
+        ],
+        "source": "CL_Sofa_2873_Leather Sofa"
+      },
+      "light": "light-living",
+      "resource": "CL_Sofa_2873_Leather Sofa:3.2"
+    },
+    {
+      "id": "read-living-2",
+      "action": "read",
+      "floor": "F1",
+      "cell": 89157,
+      "position": [
+        4.199999999999999,
+        -0.144,
+        5
+      ],
+      "look": [
+        4.2,
+        4.5
+      ],
+      "seat": {
+        "position": [
+          4.2,
+          0.3673308029967107,
+          6.1
+        ],
+        "source": "CL_Sofa_2873_Leather Sofa"
+      },
+      "light": "light-living",
+      "resource": "CL_Sofa_2873_Leather Sofa:4.2"
+    },
+    {
+      "id": "work-master",
+      "action": "work",
+      "floor": "F2",
+      "cell": 64211,
+      "position": [
+        1.4399999999999995,
+        3.0589999999999997,
+        5.6
+      ],
+      "look": [
+        0.75,
+        6.44
+      ],
+      "seat": {
+        "position": [
+          0.75,
+          3.5465755245752697,
+          5.843
+        ],
+        "source": "P3_Master_writing_chair_CL_Dining6_01_fabric"
+      },
+      "tableY": 3.794999837875366,
+      "light": "light-master",
+      "resource": "P3_Master_writing_chair_CL_Dining6_01_fabric"
+    },
+    {
+      "id": "work-brother",
+      "action": "work",
+      "floor": "F2",
+      "cell": 20353,
+      "position": [
+        -7.6000000000000005,
+        3.065,
+        1.56
+      ],
+      "look": [
+        -7.62,
+        0.37
+      ],
+      "seat": {
+        "position": [
+          -7.62,
+          3.5465755247620683,
+          0.967
+        ],
+        "source": "P3_Bedroom1_desk_chair_CL_Dining6_01_fabric"
+      },
+      "tableY": 3.794999837875366,
+      "light": "light-bed1",
+      "resource": "P3_Bedroom1_desk_chair_CL_Dining6_01_fabric"
+    },
+    {
+      "id": "work-family",
+      "action": "work",
+      "floor": "F1",
+      "cell": 99042,
+      "position": [
+        -0.5999999999999996,
+        -0.001,
+        5.6
+      ],
+      "look": [
+        -2.1,
+        4.55
+      ],
+      "seat": {
+        "position": [
+          -1.6165,
+          0.4865656829457051,
+          5.3885
+        ],
+        "source": "CL_Dining6_06_fabric"
+      },
+      "tableY": 0.7549999952316284,
+      "light": "light-dining",
+      "resource": "CL_Dining6_06_fabric"
+    },
+    {
+      "id": "coffee-waterbar",
+      "action": "coffee",
+      "floor": "B1",
+      "cell": 100636,
+      "position": [
+        -2.200000000000001,
+        -3.055,
+        5.68
+      ],
+      "look": [
+        -2.2045587301254272,
+        6.465499401092529
+      ],
+      "light": "light-waterbar"
+    },
+    {
+      "id": "wash-f1",
+      "action": "wash",
+      "floor": "F1",
+      "cell": 36259,
+      "position": [
+        -4,
+        0.005,
+        1.84
+      ],
+      "look": [
+        -3.47,
+        2.1
+      ],
+      "light": "light-f1bath"
+    }
+  ],
+  "screen": {
+    "floor": "B1",
+    "position": [
+      10.4,
+      -1.72,
+      0.553
+    ],
+    "size": [
+      2.47,
+      1.38
+    ],
+    "source": "P3_Cinema_screen"
+  },
+  "coffee": {
+    "floor": "B1",
+    "position": [
+      -2.2045587301254272,
+      -1.79,
+      6.465499401092529
+    ]
+  },
+  "wash": {
+    "floor": "F1",
+    "position": [
+      -3.521970748901367,
+      0.9876555800437927,
+      2.258339762687683
+    ]
+  },
+  "sleepLights": {
+    "father": "light-master",
+    "mother": "light-master",
+    "brother": "light-bed1",
+    "daughter": "light-bed2"
+  }
+}

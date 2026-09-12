@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
-import { ResidentLife } from './residents.js';
+import { ResidentLife } from './residents.js?v=2';
 
-const ROUTINES={father:['drink','work','eat','tv','bathroom','clean','sleep'],mother:['eat','clean','drink','work','tv','bathroom','sleep'],brother:['work','drink','eat','clean','tv','bathroom','sleep'],daughter:['clean','eat','drink','work','tv','bathroom','sleep']};
-const LABELS={look:'稍作休息',walk:'散步',wait:'等一等',stairs:'上下楼',eat:'吃饭',drink:'喝水',bathroom:'使用洗手间',sleep:'睡觉',clean:'打扫',work:'工作学习',tv:'看电视',chat:'聊天'};
+export const ROUTINES={father:['drink','work','eat','tv','coffee','bathroom','clean','sleep','read'],mother:['eat','clean','drink','work','coffee','tv','bathroom','sleep','read'],brother:['work','drink','eat','clean','tv','bathroom','sleep','read'],daughter:['clean','eat','drink','work','tv','bathroom','sleep','read']};
+const LABELS={look:'稍作休息',walk:'散步',wait:'等一等',stairs:'上下楼',eat:'吃饭',drink:'喝水',bathroom:'使用洗手间',sleep:'睡觉',clean:'打扫',work:'工作学习',tv:'看电视',chat:'聊天',coffee:'冲泡咖啡',read:'阅读',wash:'洗手',switch:'操作开关',guide:'介绍房屋',listen:'听取介绍'};
 const LINES={eat:['开饭啦，慢慢吃。','今天的饭真香！'],drink:['喝口水，休息一下。','记得多喝水哦。'],bathroom:['洗手间使用中。'],sleep:['晚安，做个好梦。','先睡一会儿。'],clean:['把这里收拾干净。','一起把家照顾好。'],work:['专心一会儿，马上就好。','这个问题有办法了。'],tv:['一起看会儿电视吧。','这一段真有意思。']};
 const DIALOGUES=[['今天想吃什么呀？','想吃番茄炒蛋！'],['忙完一起看电视吧。','好呀，等我一下。'],['开饭前记得洗手哦。','好，我这就去。'],['今天过得怎么样？','挺开心的，还想聊一会儿。']];
 const V=a=>new THREE.Vector3(...a);
@@ -12,10 +12,6 @@ export class FamilyLife extends ResidentLife {
   addFloor(floor){super.addFloor(floor);for(const p of this.people)if(p.routineIndex===undefined){p.routineIndex=0;p.mode='idle';p.wait=.3;p.failures=0;}}
   say(p,text,seconds=6){p.speech={text,until:this.time+seconds};}
   status(p){return p.transit?'正在上下楼':p.mode==='route'&&p.goal?'前往'+LABELS[p.goal.action]:LABELS[p.action]||'稍作休息';}
-  blocked(floor,x,z,doors,person=null,people=true){
-    if(super.blocked(floor,x,z,doors,person,people))return true;
-    return people&&this.people.some(p=>p!==person&&p.transit?.toFloor===floor&&this.point(floor,p.transit.link.nodes[floor]).distanceTo(new THREE.Vector3(x,this.point(floor,p.transit.link.nodes[floor]).y,z))<this.navigation.radius*2+.08);
-  }
   selectGoal(p){
     for(let n=0;n<ROUTINES[p.id].length;n++){
       const action=ROUTINES[p.id][p.routineIndex++%ROUTINES[p.id].length];
@@ -59,6 +55,8 @@ export class FamilyLife extends ResidentLife {
     p.transfer={from:p.position.clone(),to:waking?p.bedApproach.clone():bedPoint,q0:waking?lying:upright,q1:waking?upright:lying,t:0,waking};p.mode='bed-transfer';
   }
   finish(p){p.goal=null;p.path=[];p.navPurpose=null;p.mode='idle';p.action='look';p.wait=.6+this.random();p.failures=0;}
+  endActivity(p){if(p.action==='sleep')this.bedTransfer(p,true);else this.finish(p);}
+  posePerson(p,moving){p.rig.pose(this.time+p.phase,moving,p.chatRemaining>0?'chat':p.action);}
   startStairs(p){
     const {link,up}=p.navPurpose,toFloor=up?link.upper:link.lower,exit=this.point(toFloor,link.nodes[toFloor]);
     if(this.stairLocks.has(link.id))return;
@@ -75,7 +73,7 @@ export class FamilyLife extends ResidentLife {
     if(t.t>=1){t.index++;t.t=0;if(t.index>=t.path.length){p.floor=t.toFloor;p.cell=t.link.nodes[p.floor];p.component=this.navigation.floors[p.floor].components[0];this.stairLocks.delete(t.link.id);p.transit=null;p.mode='route';p.navPurpose=null;p.wait=.15;}}
   }
   conversation(){
-    const available=this.people.filter(p=>!p.transit&&!p.transfer&&!['sleep','bathroom'].includes(p.action)&&!p.chatRemaining&&p.mode!=='stair-wait');
+    const available=this.people.filter(p=>!p.transit&&!p.transfer&&!p.preparing&&!p.seat&&!['sleep','bathroom'].includes(p.action)&&!p.chatRemaining&&p.mode!=='stair-wait');
     for(let i=0;i<available.length;i++)for(let j=i+1;j<available.length;j++){
       const a=available[i],b=available[j];if(a.floor!==b.floor||a.position.distanceTo(b.position)>2.2)continue;
       const lines=DIALOGUES[Math.floor(this.random()*DIALOGUES.length)];this.say(a,lines[0],4);this.pendingReplies.push({at:this.time+2.4,p:b,text:lines[1]});a.chatRemaining=b.chatRemaining=6;a.yaw=Math.atan2(b.position.x-a.position.x,b.position.z-a.position.z);b.yaw=a.yaw+Math.PI;return true;
@@ -92,17 +90,19 @@ export class FamilyLife extends ResidentLife {
     const people=this.people.slice(this.planCursor).concat(this.people.slice(0,this.planCursor));this.planCursor=(this.planCursor+1)%Math.max(1,this.people.length);
     for(const p of people){
       let moving=false;const doors=cache.get(p.floor)||this.doorSegments(p.floor);cache.set(p.floor,doors);
-      if(p.chatRemaining>0){p.chatRemaining-=dt;}
-      else if(p.transfer){const t=p.transfer;t.t=Math.min(1,t.t+dt/1.4);const ease=t.t*t.t*(3-2*t.t);p.position.lerpVectors(t.from,t.to,ease);p.position.y+=Math.sin(Math.PI*ease)*.35;p.rig.root.quaternion.slerpQuaternions(t.q0,t.q1,ease);if(t.t===1){p.transfer=null;if(t.waking)this.finish(p);else p.mode='activity';}}
+      if(p.hold&&p.path.length){p.action='wait';}
+      else if(p.chatRemaining>0){p.chatRemaining-=dt;}
+      else if(p.preparing){p.preparing.remaining-=dt;if(p.preparing.remaining<=0){p.transfer=p.preparing.transfer;p.preparing=null;p.action=p.goal.action;p.mode=p.transfer?'furniture-transfer':'activity';}}
+      else if(p.transfer){const t=p.transfer;t.t=Math.min(1,t.t+dt/1.4);const ease=t.t*t.t*(3-2*t.t);p.position.lerpVectors(t.from,t.to,ease);p.position.y+=Math.sin(Math.PI*ease)*(t.arc??.35);p.rig.root.quaternion.slerpQuaternions(t.q0,t.q1,ease);if(t.t===1){p.transfer=null;if(t.waking)this.finish(p);else p.mode='activity';}}
       else if(p.transit){this.moveStairs(p,dt);moving=true;}
       else if(p.mode==='stair-wait'){p.wait-=dt;if(p.wait<=0){this.startStairs(p);p.wait=1;}}
-      else if(p.mode==='activity'){p.remaining-=dt;if(p.remaining<=0){if(p.action==='sleep')this.bedTransfer(p,true);else this.finish(p);}}
+      else if(p.mode==='activity'){p.remaining-=dt;if(p.remaining<=0)this.endActivity(p);}
       else if(p.path.length){
         const target=this.point(p.floor,p.path[0]),delta=target.clone().sub(p.position),distance=Math.hypot(delta.x,delta.z),amount=Math.min(distance,p.speed*dt),next=p.position.clone().lerp(target,distance?amount/distance:1);
         if(this.blocked(p.floor,next.x,next.z,doors,p)){p.blockedTime+=dt;p.action='wait';if(p.blockedTime>1.3){p.path=[];p.wait=.5+this.random();p.blockedTime=0;}}
         else{p.position.copy(next);moving=distance>.001;p.action='walk';p.blockedTime=0;if(moving){const desired=Math.atan2(delta.x,delta.z);p.yaw+=Math.atan2(Math.sin(desired-p.yaw),Math.cos(desired-p.yaw))*Math.min(1,dt*10);}if(distance<=amount+.0001){p.cell=p.path.shift();if(!p.path.length){if(p.yielding){p.yielding=false;p.navPurpose=null;p.wait=3;}else this.arrive(p);}}}
       }else{p.wait-=dt;if(p.wait<=0){if(!p.goal)this.selectGoal(p);if(p.goal&&!planned){this.plan(p,doors);planned=true;}}}
-      p.rig.root.position.copy(p.position);if(!p.transfer&&p.action!=='sleep')p.rig.root.rotation.set(0,p.yaw,0);p.rig.pose(this.time+p.phase,moving,p.chatRemaining>0?'chat':p.action);
+      p.rig.root.position.copy(p.position);if(!p.transfer&&p.action!=='sleep')p.rig.root.rotation.set(0,p.yaw,0);this.posePerson(p,moving);
     }
     visibility();
   }

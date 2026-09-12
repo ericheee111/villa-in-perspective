@@ -7,15 +7,15 @@ const PROFILES = [
   {id:'daughter',name:'妹妹',floor:'F2',seed:[-2.7,2.8],shirt:0xd6b276,hair:0x4c3830,style:'bob',scale:.70},
 ];
 
-function makeResident(profile) {
+export function makeResident(profile) {
   const root=new THREE.Group();root.name='Resident_'+profile.name;root.scale.setScalar(profile.scale);
   const mat=color=>new THREE.MeshStandardMaterial({color,roughness:.83});
   const skin=mat(0xf0c9a6),shirt=mat(profile.shirt),hair=mat(profile.hair),dark=mat(0x343e3d),shoe=mat(0xe8e4d7),eye=mat(0x302d29),pink=mat(0xe3a697);
   const ball=new THREE.SphereGeometry(1,12,8),capsule=new THREE.CapsuleGeometry(.055,.17,3,8);
   const sphere=(parent,position,scale,material)=>{const mesh=new THREE.Mesh(ball,material);mesh.position.set(...position);mesh.scale.set(...scale);parent.add(mesh);return mesh;};
   const body=new THREE.Group();root.add(body);
-  sphere(body,[0,.48,0],[.17,.23,.115],shirt);
-  sphere(body,[0,.70,0],[.055,.055,.055],skin);
+  const torso=sphere(body,[0,.48,0],[.17,.23,.115],shirt);
+  const neck=sphere(body,[0,.70,0],[.055,.055,.055],skin);
   const head=new THREE.Group();head.position.y=.88;body.add(head);
   sphere(head,[0,0,0],[.225,.225,.213],skin);
   const cap=new THREE.Mesh(new THREE.SphereGeometry(.23,14,9,0,Math.PI*2,0,Math.PI*.52),hair);cap.position.y=.015;head.add(cap);
@@ -34,11 +34,12 @@ function makeResident(profile) {
   sphere(head,[-.08,.158,.15],[.13,.075,.08],hair);
   if(profile.id==='father')for(const side of [-1,1]){const rim=new THREE.Mesh(new THREE.TorusGeometry(.05,.006,4,14),dark);rim.position.set(side*.077,.005,.219);head.add(rim);}
   if(profile.id==='daughter')for(const side of [-1,1])sphere(head,[.13+side*.027,.145,.135],[.032,.023,.015],pink);
-  const legs=[],arms=[];
+  const legs=[],knees=[],arms=[];
   for(const side of [-1,1]){
     const leg=new THREE.Group();leg.position.set(side*.078,.30,0);root.add(leg);
-    const limb=new THREE.Mesh(capsule,dark);limb.position.y=-.11;leg.add(limb);
-    sphere(leg,[0,-.255,.036],[.064,.043,.096],shoe);legs.push(leg);
+    const thigh=new THREE.Mesh(new THREE.CapsuleGeometry(.052,.07,3,8),dark);thigh.position.y=-.065;leg.add(thigh);
+    const knee=new THREE.Group();knee.position.y=-.13;leg.add(knee);const shin=new THREE.Mesh(new THREE.CapsuleGeometry(.047,.065,3,8),dark);shin.position.y=-.057;knee.add(shin);
+    sphere(knee,[0,-.125,.036],[.064,.043,.096],shoe);legs.push(leg);knees.push(knee);
     const arm=new THREE.Group();arm.position.set(side*.18,.62,0);body.add(arm);
     const sleeve=new THREE.Mesh(capsule,shirt);sleeve.position.y=-.085;arm.add(sleeve);
     sphere(arm,[0,-.225,0],[.052,.055,.047],skin);arms.push(arm);
@@ -52,12 +53,16 @@ function makeResident(profile) {
   const bowl=new THREE.Group();bowl.position.set(-.055,.51,.21);body.add(bowl);bowl.add(new THREE.Mesh(new THREE.SphereGeometry(.065,10,6,0,Math.PI*2,Math.PI/2,Math.PI/2),shoe));sphere(bowl,[0,0,0],[.058,.02,.058],mat(0xe8c783));bowl.visible=false;
   const spoon=new THREE.Mesh(new THREE.CapsuleGeometry(.007,.09,2,5),shoe);spoon.position.set(0,-.24,.045);spoon.rotation.x=-.8;arms[1].add(spoon);spoon.visible=false;
   const mop=new THREE.Group();root.add(mop);const stick=new THREE.Mesh(new THREE.CylinderGeometry(.009,.009,.64,6),mat(0x9a8463));stick.position.set(.16,.35,.18);stick.rotation.x=-.15;mop.add(stick);const brush=new THREE.Mesh(new THREE.BoxGeometry(.23,.035,.085),mat(0x8c9b86));brush.position.set(.16,.023,.23);mop.add(brush);mop.visible=false;
-  return {root,pose(time,moving,action){
+  if(profile.id==='guide'){const badge=new THREE.Mesh(new THREE.BoxGeometry(.08,.05,.008),mat(0xf4e8ca));badge.position.set(-.075,.57,.108);body.add(badge);}
+  return {root,pose(time,moving,action,{seated=0,tableY=null,sleepBlend=1}={}){
     const phase=time*7.5;body.position.y=moving?Math.abs(Math.sin(phase))*.012:Math.sin(time*1.5)*.002;
     legs[0].rotation.x=moving?Math.sin(phase)*.31:0;legs[1].rotation.x=moving?-Math.sin(phase)*.31:0;
+    const lying=action==='sleep'?sleepBlend:0;torso.position.z=-.10*lying;neck.position.z=-.04*lying;for(const leg of legs)leg.position.z=-.14*lying;for(const arm of arms)arm.position.z=-.13*lying;
+    for(let i=0;i<2;i++){legs[i].rotation.x=THREE.MathUtils.lerp(legs[i].rotation.x,-Math.PI/2,seated);knees[i].rotation.x=seated*(Math.PI/2+Math.sin(time*1.4+i)*.05);}
     arms[0].rotation.set(moving?-Math.sin(phase)*.25:0,0,.08);arms[1].rotation.set(moving?Math.sin(phase)*.25:0,0,-.08);
     head.rotation.set(0,moving?0:Math.sin(time*.55)*.2,0);
-    cup.visible=!moving&&action==='drink';book.visible=!moving&&action==='read';laptop.visible=!moving&&action==='work';bowl.visible=!moving&&action==='eat';spoon.visible=bowl.visible;mop.visible=!moving&&action==='clean';
+    cup.visible=!moving&&['drink','coffee'].includes(action);book.visible=!moving&&action==='read';laptop.visible=!moving&&action==='work';bowl.visible=!moving&&action==='eat';spoon.visible=bowl.visible;mop.visible=!moving&&action==='clean';
+    laptop.position.y=tableY===null?.51:(tableY-root.position.y)/profile.scale+.025;bowl.position.y=tableY===null?.51:(tableY-root.position.y)/profile.scale+.07;bowl.position.z=seated?.34:.21;
     for(const pupil of eyes)pupil.scale.y=action==='sleep'?.006:.033;
     if(cup.visible){arms[1].rotation.x=-1.6+Math.sin(time*1.3)*.18;head.rotation.x=.08;}
     if(book.visible){arms[0].rotation.x=-.9;arms[1].rotation.x=-.9;head.rotation.x=.18;}
@@ -66,6 +71,9 @@ function makeResident(profile) {
     if(mop.visible){mop.position.z=Math.sin(time*2)*.07;arms[1].rotation.x=-.6+Math.sin(time*2)*.15;body.rotation.x=.08;}else body.rotation.x=0;
     if(!moving&&action==='tv')head.rotation.y=Math.sin(time*.3)*.08;
     if(!moving&&action==='chat')arms[1].rotation.z=-1.2+Math.sin(time*3)*.12;
+    if(!moving&&action==='guide'){arms[1].rotation.set(-.25,0,-1.05+Math.sin(time*2)*.12);head.rotation.y=Math.sin(time*.8)*.25;}
+    if(!moving&&action==='switch'){arms[1].rotation.x=-1.6;arms[1].rotation.z=-.4;}
+    if(!moving&&action==='wash'){arms[0].rotation.x=-1.6+Math.sin(time*5)*.1;arms[1].rotation.x=-1.6-Math.sin(time*5)*.1;}
     if(!moving&&action==='stretch'){arms[0].rotation.z=2.3;arms[1].rotation.z=-2.3;head.rotation.x=-.08;}
   }};
 }
@@ -103,27 +111,30 @@ export class ResidentLife {
     const index=this.cell(floor,x,z);if(index<0||this.navigation.floors[floor].heights[index]===null)return true;
     const radius=this.navigation.radius;
     if(doors.some(d=>segmentDistanceSquared(x,z,d.a,d.b)<(radius+.045)**2))return true;
-    return people&&this.people.some(p=>p!==person&&p.floor===floor&&(p.position.x-x)**2+(p.position.z-z)**2<(radius*2+.045)**2);
+    return people&&this.people.some(p=>p!==person&&this.actorObstacles(p,floor).some(o=>(o.position.x-x)**2+(o.position.z-z)**2<(radius*2+o.padding)**2));
   }
+  actorObstacles(p,floor){const points=[];if(p.floor===floor){points.push({position:p.position,padding:.045});if(p.seat&&p.seatApproach)points.push({position:p.seatApproach,padding:.08});if(p.goal?.action==='sleep'&&p.bedApproach&&(p.transfer||p.preparing||p.mode==='activity'))points.push({position:p.bedApproach,padding:.08});}if(p.transit?.toFloor===floor)points.push({position:this.point(floor,p.transit.link.nodes[floor]),padding:.08});return points;}
   addFloor(floor){
     if(this.ready.has(floor))return;this.ready.add(floor);
+    for(const profile of PROFILES.filter(p=>p.floor===floor))this.addPerson(profile);
+  }
+  addPerson(profile){
+    const floor=profile.floor;
     const f=this.navigation.floors[floor],doors=this.doorSegments(floor);
-    for(const profile of PROFILES.filter(p=>p.floor===floor)){
       let cell=-1,best=Infinity;
       for(const i of f.components[0]){const p=this.point(floor,i),score=(p.x-profile.seed[0])**2+(p.z-profile.seed[1])**2;if(score<best&&!this.blocked(floor,p.x,p.z,doors)){cell=i;best=score;}}
-      if(cell<0)continue;
+      if(cell<0)return null;
       const rig=makeResident(profile),position=this.point(floor,cell);rig.root.position.copy(position);this.root.add(rig.root);
-      this.people.push({...profile,rig,cell,position,component:f.components.find(c=>c.includes(cell)),path:[],wait:1+this.random()*3,blockedTime:0,action:'look',phase:this.random()*6,speed:.38+this.random()*.1,yaw:0});
-    }
+      const person={...profile,rig,cell,position,component:f.components.find(c=>c.includes(cell)),path:[],wait:1+this.random()*3,blockedTime:0,action:'look',phase:this.random()*6,speed:.38+this.random()*.1,yaw:0};this.people.push(person);return person;
   }
-  findPath(person,goal,doors){
+  findPath(person,goal,doors,ignorePeople=false){
     const f=this.navigation.floors[person.floor],start=this.cell(person.floor,person.position.x,person.position.z),size=f.heights.length,step=this.navigation.step;
     if(start<0||goal<0||goal>=size||f.heights[start]===null||f.heights[goal]===null)return [];
     const mask=Uint8Array.from(f.heights,h=>h===null?1:0),radius=this.navigation.radius;
     const mark=(minX,maxX,minZ,maxZ,predicate)=>{const x0=Math.max(0,Math.floor((minX-f.origin[0])/step)),x1=Math.min(f.width-1,Math.ceil((maxX-f.origin[0])/step)),z0=Math.max(0,Math.floor((minZ-f.origin[1])/step)),z1=Math.min(f.depth-1,Math.ceil((maxZ-f.origin[1])/step));for(let z=z0;z<=z1;z++)for(let x=x0;x<=x1;x++){const i=z*f.width+x;if(!mask[i]&&predicate(f.origin[0]+x*step,f.origin[1]+z*step))mask[i]=1;}};
     for(const d of doors){const r=radius+.045;mark(Math.min(d.a[0],d.b[0])-r,Math.max(d.a[0],d.b[0])+r,Math.min(d.a[1],d.b[1])-r,Math.max(d.a[1],d.b[1])+r,(x,z)=>segmentDistanceSquared(x,z,d.a,d.b)<r*r);}
     const circle=(p,r)=>mark(p.x-r,p.x+r,p.z-r,p.z+r,(x,z)=>(p.x-x)**2+(p.z-z)**2<r*r);
-    for(const p of this.people){if(p===person)continue;if(p.floor===person.floor)circle(p.position,radius*2+.045);if(p.transit?.toFloor===person.floor)circle(this.point(person.floor,p.transit.link.nodes[person.floor]),radius*2+.08);}
+    if(!ignorePeople)for(const p of this.people){if(p===person)continue;for(const o of this.actorObstacles(p,person.floor))circle(o.position,radius*2+o.padding);}
     if(mask[goal])return [];
     const open=new MinHeap(),came=new Int32Array(size).fill(-1),cost=new Float32Array(size).fill(Infinity),closed=new Uint8Array(size);cost[start]=0;
     const heuristic=i=>Math.hypot(i%f.width-goal%f.width,Math.floor(i/f.width)-Math.floor(goal/f.width));open.push({index:start,score:heuristic(start)});let count=0;
