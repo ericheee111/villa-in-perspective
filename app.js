@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { HouseInteractions, isTap } from './interactions.js?v=1';
-import { ViewCutaway, addLandingConnector, createExterior, createStairRoute } from './house-view.js?v=landscape-1';
+import { ViewCutaway, addLandingConnector, createExterior, createStairRoute } from './house-view.js?v=transparency-1';
 import { createLandscape } from './landscape.js?v=1';
 import { FurnitureLife, HouseAppliances } from './furniture-life.js?v=1';
 import { HouseTour } from './house-tour.js?v=1';
@@ -115,7 +115,7 @@ function buildLabels(){
 }
 function updateLabels(){if(!activeCamera)return;const w=stage.clientWidth,h=stage.clientHeight;for(const l of labels){const point=l.position.clone().project(activeCamera);l.button.hidden=!$('labels').checked||state.inside||point.z>1||point.z< -1||Math.abs(point.x)>1||Math.abs(point.y)>1;l.button.style.left=(point.x*.5+.5)*w+'px';l.button.style.top=(-point.y*.5+.5)*h+'px';l.roomButton.classList.toggle('selected',l.room.id===state.room);}}
 function applyCut(){if(!activeGroup)return;cutaway.apply(activeGroup,{enabled:state.cut,inside:state.inside,overview:state.floor==='ALL'});if(stairRoute)stairRoute.visible=state.floor==='ALL'&&state.overviewFocus==='stairs'&&state.cut;updateCutDirection();scene.getObjectByName('ground').position.y=state.floor==='ALL'&&!state.cut?-.22:-3.3;}
-function updateCutDirection(){if(!activeCamera||!state.cut)return;cutaway.update(activeCamera.position,controls.target,state.mode==='plan');}
+function updateCutDirection(){if(!activeCamera)return;cutaway.update(activeCamera.position,controls.target,state.mode==='plan');const follow=!!(tour?.active&&$('tour-follow').checked&&state.mode==='3d');const people=follow?tour.people.map(p=>p.position.clone().add(vec([0,.52,0]))):[];cutaway.transparency.update(activeCamera.position,people,follow);}
 function resetOverview(instant=false){
  state.inside=false;state.room=null;state.cut=true;state.overviewFocus='all';pressed(['cut','solid'],'cut');if(stairRoute)stairRoute.visible=false;
  camera.fov=42;camera.updateProjectionMatrix();const target=vec(floorInfo.ALL.center),scale=Math.max(1,1.1/Math.max(.4,camera.aspect));
@@ -216,7 +216,7 @@ function bindModelInteractions(){
   const tap=isTap(start,point(e));pointers.delete(e.pointerId);start=null;if(!tap||state.loading||!activeGroup||stage.hidden)return;
   const rect=canvas.getBoundingClientRect();ray.setFromCamera(new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1),activeCamera);
   activeGroup.updateMatrixWorld(true);
-  const hit=ray.intersectObject(activeGroup,true).find(h=>{for(let o=h.object;o;o=o.parent)if(!o.visible)return false;const m=h.object.material,planes=m?.clippingPlanes;if(!planes?.length)return true;const clipped=p=>p.distanceToPoint(h.point)<0;return !(m.clipIntersection?planes.every(clipped):planes.some(clipped));});
+  const hit=ray.intersectObject(activeGroup,true).find(h=>{for(let o=h.object;o;o=o.parent)if(!o.visible)return false;if(cutaway.transparency.isFaded(h.object,h.point))return false;const m=h.object.material,planes=m?.clippingPlanes;if(!planes?.length)return true;const clipped=p=>p.distanceToPoint(h.point)<0;return !(m.clipIntersection?planes.every(clipped):planes.some(clipped));});
   if(hit?.object.userData.doorId)devices.toggleDoor(hit.object.userData.doorId);
   else if(hit?.object.userData.lightId)devices.toggleLight(hit.object.userData.lightId);
   else if(hit?.object.userData.tvSwitch)appliances.toggleTV();

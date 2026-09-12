@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { ViewTransparency } from './view-transparency.js?v=1';
 
 export const LEVELS = { B1: -3.06, F1: 0, F2: 3.06 };
 
@@ -9,6 +10,7 @@ export class ViewCutaway {
       this.planes.set(floor, [new THREE.Plane(new THREE.Vector3(0, -1, 0), level + 1.05), new THREE.Plane()]);
     }
     this.direction = new THREE.Vector3(0, 0, 1);
+    this.transparency = new ViewTransparency(this.planes);
   }
 
   update(cameraPosition, focus, plan = false) {
@@ -24,22 +26,22 @@ export class ViewCutaway {
 
   apply(root, { enabled, inside, overview }) {
     root.traverse(mesh => {
-      if (!mesh.isMesh) return;
+      if (!mesh.isMesh || mesh.userData.viewGhost) return;
       const role = mesh.userData.role;
       const exterior = mesh.userData.exterior;
       mesh.visible = role !== 'ceiling' || (!enabled && (inside || overview));
       if (exterior) mesh.visible = overview && (!enabled || role === 'shell');
       const material = mesh.material;
-      const floor = mesh.userData.floor || material.userData.floor;
-      let planes = enabled && role === 'shell' ? this.planes.get(floor) || this.planes.get('F2') : [];
+      this.transparency.attach(mesh);
+      let planes = [];
       if (role === 'landscape' && enabled && overview) planes = [this.planes.get('F1')[1]];
       const changed = material.clippingPlanes !== planes || material.clipIntersection !== true;
       material.clippingPlanes = planes;
-      // Intersect the near-camera half-space with the part above the low wall.
-      // Far walls retain their complete height, even while the camera rotates.
+      // Landscape keeps its overview cut; walls use the translucent pass instead.
       material.clipIntersection = true;
       if (changed) material.needsUpdate = true;
     });
+    this.transparency.setCut(enabled);
   }
 }
 
