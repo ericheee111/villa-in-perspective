@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { HouseInteractions, isTap } from './interactions.js?v=1';
-import { ViewCutaway, addLandingConnector, createExterior, createStairRoute } from './house-view.js?v=transparency-2';
+import { ViewCutaway, addLandingConnector, createExterior, createStairRoute } from './house-view.js?v=transparency-3';
 import { createLandscape } from './landscape.js?v=1';
 import { FurnitureLife, HouseAppliances } from './furniture-life.js?v=1';
 import { HouseTour } from './house-tour.js?v=1';
-import { createOcclusionFloor } from './view-transparency.js?v=2';
+import { createOcclusionFloor } from './view-transparency.js?v=3';
 import { initInterface } from './interface.js?v=1';
-import { fitPeopleView, personViewEye } from './camera-frame.js?v=1';
+import { fitPeopleView, personViewEye } from './camera-frame.js?v=2';
 
 const $=id=>document.getElementById(id), stage=$('stage');
 const ui=initInterface();
@@ -120,7 +120,13 @@ function buildLabels(){
 }
 function updateLabels(){if(!activeCamera)return;const w=stage.clientWidth,h=stage.clientHeight;for(const l of labels){const point=l.position.clone().project(activeCamera);l.button.hidden=!$('labels').checked||state.inside||tour?.active||point.z>1||point.z< -1||Math.abs(point.x)>1||Math.abs(point.y)>1;l.button.style.left=(point.x*.5+.5)*w+'px';l.button.style.top=(-point.y*.5+.5)*h+'px';l.roomButton.classList.toggle('selected',l.room.id===state.room);}}
 function applyCut(){if(!activeGroup)return;cutaway.apply(activeGroup,{enabled:state.cut,inside:state.inside,overview:state.floor==='ALL'});if(stairRoute)stairRoute.visible=state.floor==='ALL'&&state.overviewFocus==='stairs'&&state.cut;updateCutDirection();scene.getObjectByName('ground').position.y=state.floor==='ALL'&&!state.cut?-.22:-3.3;}
-function updateCutDirection(){if(!activeCamera)return;cutaway.update(activeCamera.position,controls.target,state.mode==='plan');const follow=!!(tour?.active&&$('tour-follow').checked&&state.mode==='3d');const people=follow?tour.people.map(p=>p.position.clone().add(vec([0,.52,0]))):[];cutaway.transparency.update(activeCamera.position,people,follow);}
+function updateCutDirection(){
+ if(!activeCamera)return;
+ cutaway.update(activeCamera.position,controls.target,state.mode==='plan');
+ const owner=tour?.active?tour:family;
+ const people=owner?.shown?owner.people.filter(p=>state.floor==='ALL'||p.floor===state.floor&&!p.transit).map(p=>p.position.clone().add(vec([0,p.action==='sleep'?.25:.52,0]))):[];
+ cutaway.transparency.updateForCamera(activeCamera,controls.target,people);
+}
 function resetOverview(instant=false){
  state.inside=false;state.room=null;state.cut=true;state.overviewFocus='all';pressed(['cut','solid'],'cut');if(stairRoute)stairRoute.visible=false;
  camera.fov=42;camera.updateProjectionMatrix();const target=vec(floorInfo.ALL.center),scale=Math.max(1,1.1/Math.max(.4,camera.aspect));
@@ -150,7 +156,7 @@ function buildFamilyControls(){
  for(const p of family.people){if(familyElements.has(p.id))continue;const button=document.createElement('button');button.className='family-person';button.style.setProperty('--person-color','#'+p.shirt.toString(16).padStart(6,'0'));const name=document.createElement('strong');name.textContent=p.name;const status=document.createElement('span');button.append(name,status);button.onclick=()=>focusPerson(p);$('family-list').append(button);const bubble=document.createElement('div');bubble.className='family-bubble';bubble.hidden=true;$('family-bubbles').append(bubble);familyElements.set(p.id,{button,status,bubble});}
  $('family-pause').textContent=family.paused?'继续生活':'暂停生活';$('family-pause').setAttribute('aria-pressed',String(family.paused));
 }
-async function focusPerson(p){if(state.loading||tour.active)return;$('activity-person').value=p.id;if(p.transit){await changeFloor('ALL');}else if(state.floor!==p.floor)await changeFloor(p.floor);if(state.loading)return;state.mode='3d';state.inside=false;updateMode();state.cut=true;pressed(['cut','solid'],'cut');applyCut();const target=p.position.clone().add(vec([0,.48,0]));moveTo(personViewEye(activeGroup,target,cutaway),target);$('view-name').textContent=p.name+' · '+family.status(p);}
+async function focusPerson(p){if(state.loading||tour.active)return;$('activity-person').value=p.id;if(p.transit){await changeFloor('ALL');}else if(state.floor!==p.floor)await changeFloor(p.floor);if(state.loading)return;state.mode='3d';state.inside=false;updateMode();state.cut=true;pressed(['cut','solid'],'cut');applyCut();const target=p.position.clone().add(vec([0,.48,0]));moveTo(personViewEye(activeGroup,target),target);$('view-name').textContent=p.name+' · '+family.status(p);}
 function updateFamilyUi(){
  if(!family||!activeCamera)return;const refresh=performance.now()-familyUiTime>700;if(refresh)familyUiTime=performance.now();const w=stage.clientWidth,h=stage.clientHeight;
  for(const p of [...family.people,...tour.people]){const owner=p.id.startsWith('visitor')||p.id==='guide'?tour:family,e=familyElements.get(p.id);if(!e)continue;if(refresh&&e.status){e.status.textContent=(family.paused?'已暂停 · ':!family.shown?'已隐藏 · ':'')+floorInfo[p.floor].name+' · '+family.status(p);e.button.disabled=tour.active||state.loading;}const bubble=e.bubble,point=p.position.clone().add(vec([0,p.action==='sleep'?.35:1.08,0])).project(activeCamera);const visible=owner===(tour.active?tour:family)&&owner.shown&&!state.loading&&$('family-dialogue').checked&&p.speech?.until>owner.time&&(state.floor==='ALL'||(!p.transit&&state.floor===p.floor));bubble.hidden=!visible||point.z>1||point.z< -1||Math.abs(point.x)>.95||Math.abs(point.y)>.95;if(!bubble.hidden){bubble.textContent=p.name+'：'+(owner===tour&&p.speech.text.length>24?p.speech.text.slice(0,24)+'…':p.speech.text);bubble.style.left=(point.x*.5+.5)*w+'px';bubble.style.top=(-point.y*.5+.5)*h+'px';}}

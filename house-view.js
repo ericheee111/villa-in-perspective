@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { ViewTransparency } from './view-transparency.js?v=2';
+import { ViewTransparency } from './view-transparency.js?v=3';
 
 export const LEVELS = { B1: -3.06, F1: 0, F2: 3.06 };
 

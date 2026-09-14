@@ -8,18 +8,24 @@ varying vec3 vViewMin;
 varying vec3 vViewMax;
 varying float vViewWallLike;
 uniform float viewWallEnabled;
-uniform float viewFollowEnabled;
+uniform float viewOcclusionEnabled;
 uniform vec4 viewHeight;
 uniform vec4 viewFront;
 uniform vec3 viewEye;
-uniform vec3 viewPeople[4];
-uniform int viewPeopleCount;
+uniform vec3 viewTargets[5];
+uniform int viewTargetCount;
+uniform vec3 viewDirection;
+uniform float viewParallel;
+uniform int viewFocusIndex;
 bool viewFaded() {
   if (viewWallEnabled > .5 && dot(viewHeight, vec4(vViewWorld, 1.0)) < 0.0 && dot(viewFront, vec4(vViewWorld, 1.0)) < 0.0) return true;
-  if (viewFollowEnabled > .5) {
-    for (int i = 0; i < 4; i++) {
-      if (i >= viewPeopleCount) break;
-      vec3 axis = viewPeople[i] - viewEye;
+  if (viewOcclusionEnabled > .5) {
+    for (int i = 0; i < 5; i++) {
+      if (i >= viewTargetCount) break;
+      vec3 target = viewTargets[i];
+      if (i == viewFocusIndex && all(greaterThanEqual(target, vViewMin - vec3(.06, .8, .06))) && all(lessThanEqual(target, vViewMax + vec3(.06, .8, .06)))) continue;
+      vec3 eye = viewParallel > .5 ? target - viewDirection * dot(target - viewEye, viewDirection) : viewEye;
+      vec3 axis = target - eye;
       float lengthSquared = dot(axis, axis);
       if (lengthSquared < .04) continue;
       vec3 lo = vViewMin - vec3(.24, .55, .24);
@@ -29,10 +35,10 @@ bool viewFaded() {
       bool intersects = true;
       for (int j = 0; j < 3; j++) {
         if (abs(axis[j]) < .000001) {
-          if (viewEye[j] < lo[j] || viewEye[j] > hi[j]) intersects = false;
+          if (eye[j] < lo[j] || eye[j] > hi[j]) intersects = false;
         } else {
-          float a = (lo[j] - viewEye[j]) / axis[j];
-          float b = (hi[j] - viewEye[j]) / axis[j];
+          float a = (lo[j] - eye[j]) / axis[j];
+          float b = (hi[j] - eye[j]) / axis[j];
           nearT = max(nearT, min(a, b));farT = min(farT, max(a, b));
         }
       }
@@ -60,7 +66,10 @@ export class ViewTransparency {
   constructor(planes) {
     this.planes = planes;
     this.records = new Map();
-    this.shared = { viewFollowEnabled: { value: 0 }, viewEye: { value: new THREE.Vector3() }, viewPeople: { value: Array.from({ length: 4 }, () => new THREE.Vector3()) }, viewPeopleCount: { value: 0 } };
+    this.shared = { viewOcclusionEnabled: { value: 0 }, viewEye: { value: new THREE.Vector3() }, viewTargets: { value: Array.from({ length: 5 }, () => new THREE.Vector3()) }, viewTargetCount: { value: 0 }, viewDirection: { value: new THREE.Vector3() }, viewParallel: { value: 0 }, viewFocusIndex: { value: -1 } };
+    this.projected = new THREE.Vector3();
+    this.cameraEye = new THREE.Vector3();
+    this.cameraDirection = new THREE.Vector3();
     this.floorUniforms = new Map([...planes.keys()].map(floor => [floor, { viewHeight: { value: new THREE.Vector4() }, viewFront: { value: new THREE.Vector4() } }]));
   }
 
@@ -87,7 +96,7 @@ export class ViewTransparency {
         shader.fragmentShader = fragmentMask + shader.fragmentShader;
         shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\nif (' + (ghost ? '!' : '') + 'viewFaded()) discard;\n' + (ghost ? 'if (vViewWallLike > .5) diffuseColor.a = min(diffuseColor.a, .12);' : ''));
       };
-      target.customProgramCacheKey = () => 'view-transparency-2-' + (ghost ? 'ghost' : 'solid') + (componentBounds ? '-components' : '-bounds');
+      target.customProgramCacheKey = () => 'view-transparency-3-' + (ghost ? 'ghost' : 'solid') + (componentBounds ? '-components' : '-bounds');
       target.needsUpdate = true;
     };
     patch(material, false);patch(ghostMaterial, true);
@@ -103,23 +112,36 @@ export class ViewTransparency {
     for (const record of this.records.values()) record.uniforms.viewWallEnabled.value = enabled && record.wall ? 1 : 0;
   }
 
-  update(eye, people = [], follow = false) {
+  updateForCamera(camera, focus, people = []) {
+    camera.updateMatrixWorld();
+    const targets = [focus];
+    for (const person of people) {
+      this.projected.copy(person).project(camera);
+      if (Math.abs(this.projected.x) <= 1 && Math.abs(this.projected.y) <= 1 && Math.abs(this.projected.z) <= 1) targets.push(person);
+      if (targets.length === 5) break;
+    }
+    this.update(camera.getWorldPosition(this.cameraEye), targets, true, { parallelDirection: camera.isOrthographicCamera ? camera.getWorldDirection(this.cameraDirection) : null, focusIndex: 0 });
+  }
+
+  update(eye, targets = [], enabled = true, { parallelDirection = null, focusIndex = -1 } = {}) {
     this.shared.viewEye.value.copy(eye);
-    this.shared.viewFollowEnabled.value = follow ? 1 : 0;
-    this.shared.viewPeopleCount.value = Math.min(4, people.length);
-    people.slice(0, 4).forEach((p, i) => this.shared.viewPeople.value[i].copy(p));
+    this.shared.viewOcclusionEnabled.value = enabled && targets.length ? 1 : 0;
+    this.shared.viewTargetCount.value = Math.min(5, targets.length);
+    targets.slice(0, 5).forEach((p, i) => this.shared.viewTargets.value[i].copy(p));
+    this.shared.viewParallel.value = parallelDirection ? 1 : 0;
+    if (parallelDirection) this.shared.viewDirection.value.copy(parallelDirection).normalize();
+    this.shared.viewFocusIndex.value = focusIndex;
     for (const [floor, planes] of this.planes) {
       const uniforms = this.floorUniforms.get(floor);
       for (const [i, key] of ['viewHeight', 'viewFront'].entries()) uniforms[key].value.set(planes[i].normal.x, planes[i].normal.y, planes[i].normal.z, planes[i].constant);
     }
-    for (const record of this.records.values()) record.ghost.visible = !!(record.wall && this.cutEnabled || follow);
+    for (const record of this.records.values()) record.ghost.visible = !!(record.wall && this.cutEnabled || this.shared.viewOcclusionEnabled.value);
   }
 
   isFaded(mesh, point, faceIndex = null) {
     const record = this.records.get(mesh);if (!record) return false;
     if (record.uniforms.viewWallEnabled.value && this.planes.get(record.floor).every(p => p.distanceToPoint(point) < 0)) return true;
-    if (!this.shared.viewFollowEnabled.value) return false;
-    const eye = this.shared.viewEye.value;
+    if (!this.shared.viewOcclusionEnabled.value) return false;
     let min = point.clone(), max = point.clone();
     if (faceIndex !== null) {
       const attribute = mesh.geometry.getAttribute('viewComponent');
@@ -129,9 +151,14 @@ export class ViewTransparency {
       } else { min.copy(mesh.geometry.boundingBox.min);max.copy(mesh.geometry.boundingBox.max); }
       const box = new THREE.Box3(min, max).applyMatrix4(mesh.matrixWorld);min = box.min;max = box.max;
     }
+    const focusBox = new THREE.Box3(min.clone(), max.clone()).expandByVector(new THREE.Vector3(.06, .8, .06));
     const padding = new THREE.Vector3(.24, .55, .24);min.sub(padding);max.add(padding);
-    for (let i = 0; i < this.shared.viewPeopleCount.value; i++) {
-      const axis = this.shared.viewPeople.value[i].clone().sub(eye), lengthSquared = axis.lengthSq();
+    for (let i = 0; i < this.shared.viewTargetCount.value; i++) {
+      const target = this.shared.viewTargets.value[i];
+      if (i === this.shared.viewFocusIndex.value && focusBox.containsPoint(target)) continue;
+      const direction = this.shared.viewDirection.value, eye = this.shared.viewEye.value.clone();
+      if (this.shared.viewParallel.value) eye.copy(target).addScaledVector(direction, -target.clone().sub(this.shared.viewEye.value).dot(direction));
+      const axis = target.clone().sub(eye), lengthSquared = axis.lengthSq();
       if (lengthSquared < .04) continue;
       let near = 0, far = 1 - .12 / Math.sqrt(lengthSquared), intersects = true;
       for (const key of ['x', 'y', 'z']) {
