@@ -16,6 +16,38 @@ export function initInterface() {
   aside.append(tabs, ...panes);
   function selectPanel(index) { panes.forEach((p, i) => { p.hidden = i !== index;buttons[i].setAttribute('aria-selected', String(i === index));buttons[i].tabIndex = i === index ? 0 : -1; });aside.scrollTop = 0; }
   selectPanel(0);
+  family.querySelector('.family-list').before(family.querySelector('.family-options'));
+  family.querySelector('.activity-picker').after($('activity-status'));
+  const renderBack = document.createElement('button');renderBack.id = 'render-back';renderBack.textContent = '返回三维空间';
+  renderBack.onclick = () => document.querySelector('[data-mode="3d"]').click();$('render-view').append(renderBack);
+  const imageStatus = document.createElement('p');imageStatus.id = 'render-status';imageStatus.setAttribute('role', 'status');imageStatus.hidden = true;
+  const imageRetry = document.createElement('button');imageRetry.id = 'render-retry';imageRetry.textContent = '重新加载效果图';imageRetry.hidden = true;
+  $('large-render').after(imageStatus, imageRetry);
+  let renderSource = null;
+  function renderImage(source, alt) {
+    renderSource = source;imageRetry.hidden = true;imageStatus.hidden = !source;
+    const img = $('large-render');img.hidden = !source;
+    if (!source) return;
+    img.alt = alt;
+    imageStatus.textContent = '正在加载设计效果图…';
+    if (img.getAttribute('src') !== source) img.src = source;
+    else if (img.complete && img.naturalWidth) imageStatus.hidden = true;
+    else if (img.complete) img.onerror();
+  }
+  $('large-render').onload = () => { imageStatus.hidden = true;imageRetry.hidden = true; };
+  $('large-render').onerror = () => {
+    if (!renderSource) return;
+    $('large-render').hidden = true;imageStatus.hidden = false;imageRetry.hidden = false;
+    imageStatus.textContent = '效果图未能加载。请重试，或返回三维空间继续看房。';
+  };
+  imageRetry.onclick = () => { const img = $('large-render');img.removeAttribute('src');renderImage(renderSource, img.alt); };
+  $('progress').setAttribute('aria-label', '模型加载进度');
+  const feedback = document.createElement('div');feedback.id = 'feedback';feedback.hidden = true;feedback.setAttribute('role', 'status');feedback.setAttribute('aria-live', 'polite');feedback.setAttribute('aria-atomic', 'true');
+  const feedbackText = document.createElement('span'), close = document.createElement('button');close.textContent = '×';close.setAttribute('aria-label', '关闭操作提示');feedback.append(feedbackText, close);$('stage').append(feedback);
+  let noticeTimer, hideTimer;
+  function dismissNotice() { clearTimeout(noticeTimer);feedback.classList.add('leaving');hideTimer = setTimeout(() => { feedback.hidden = true; }, 180); }
+  close.onclick = dismissNotice;
+  function notify(message) { clearTimeout(noticeTimer);clearTimeout(hideTimer);feedbackText.textContent = message;feedback.hidden = false;feedback.classList.remove('leaving');noticeTimer = setTimeout(dismissNotice, 6500); }
   tour.querySelector('.device-help').textContent = '跟随小林和三位访客参观三层空间，听介绍、看演示。约 12 分钟，也可加快或选择站点。';
   family.querySelector('.section-heading span').id = 'family-state';
   const hud = document.createElement('section');hud.id = 'tour-hud';hud.className = 'tour-hud';hud.hidden = true;hud.setAttribute('aria-label', '当前带看');
@@ -29,6 +61,9 @@ export function initInterface() {
   }, true);
   return {
     selectPanel,
+    notify,
+    renderImage,
+    roomState(selected) { const first = selected ? intro : tour;if (panes[0].firstElementChild !== first) panes[0].prepend(first); },
     tourState(t) {
       document.body.classList.toggle('tour-active', t.active);hud.hidden = !t.active || $('stage').hidden;
       if (!t.active) return;
